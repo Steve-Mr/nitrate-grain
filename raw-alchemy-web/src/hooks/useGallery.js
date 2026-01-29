@@ -2,6 +2,41 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useGalleryStorage } from './useGalleryStorage';
 import { validateFile } from '../utils/validation';
 
+// Simple p-limit implementation for concurrency control
+const pLimit = (concurrency) => {
+  const queue = [];
+  let active = 0;
+
+  const next = () => {
+    active--;
+    if (queue.length > 0) {
+      const { fn, resolve, reject } = queue.shift();
+      run(fn, resolve, reject);
+    }
+  };
+
+  const run = async (fn, resolve, reject) => {
+    active++;
+    try {
+      resolve(await fn());
+    } catch (e) {
+      reject(e);
+    } finally {
+      next();
+    }
+  };
+
+  return (fn) => new Promise((resolve, reject) => {
+    if (active < concurrency) {
+      run(fn, resolve, reject);
+    } else {
+      queue.push({ fn, resolve, reject });
+    }
+  });
+};
+
+const POOL_SIZE = 3;
+
 export const useGallery = () => {
     const storage = useGalleryStorage();
     const [images, setImages] = useState([]);
@@ -9,13 +44,17 @@ export const useGallery = () => {
     const [error, setError] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Worker for thumbnails
-    const workerRef = useRef(null);
+    // Worker Pool
+    const workersRef = useRef([]);
 
     useEffect(() => {
-        // Init worker
-        workerRef.current = new Worker(new URL('../workers/raw.worker.js', import.meta.url), { type: 'module' });
-        return () => workerRef.current?.terminate();
+        // Init worker pool
+        workersRef.current = Array.from({ length: POOL_SIZE }, (_, i) => ({
+            id: i,
+            worker: new Worker(new URL('../workers/raw.worker.js', import.meta.url), { type: 'module' }),
+            busy: false
+        }));
+        return () => workersRef.current.forEach(w => w.worker.terminate());
     }, []);
 
     const refreshImages = useCallback(async () => {
@@ -27,9 +66,9 @@ export const useGallery = () => {
         refreshImages();
     }, [refreshImages]);
 
-    const extractThumbnail = useCallback((file) => {
+    const extractThumbnail = useCallback((file, assignedWorker) => {
         return new Promise((resolve, reject) => {
-            const worker = workerRef.current;
+            const worker = assignedWorker.worker;
             const msgId = Math.random().toString(36).substring(7);
 
             const handler = (e) => {
@@ -63,7 +102,6 @@ export const useGallery = () => {
         // Get current images for duplicate detection
         const currentImages = await storage.getImages();
         const fileList = Array.from(files);
-        const uniqueFiles = [];
         const duplicates = [];
 
         // Check for duplicates
@@ -76,8 +114,6 @@ export const useGallery = () => {
             );
             if (isDuplicate) {
                 duplicates.push(file.name);
-            } else {
-                uniqueFiles.push(file);
             }
         });
 
@@ -92,39 +128,63 @@ export const useGallery = () => {
             }
         }
 
-        for (const file of fileList) {
+        const limit = pLimit(POOL_SIZE);
+
+        const processFile = async (file) => {
              try {
                  // Validate file
                  const validation = validateFile(file);
                  if (!validation.valid) {
                      console.warn("Validation failed:", validation.error);
                      setError(prev => prev ? `${prev}\n${validation.error}` : validation.error);
-                     continue;
+                     return null;
                  }
 
                  const id = crypto.randomUUID();
 
+                 // Acquire worker
+                 // Note: Single-threaded JS ensures find() is atomic in this synchronous block
+                 const workerObj = workersRef.current.find(w => !w.busy);
+
+                 if (!workerObj) {
+                     // Should not happen if limit matches pool size
+                     throw new Error("Worker pool exhausted");
+                 }
+
+                 workerObj.busy = true;
+
                  // 1. Get Thumbnail
                  let thumbBlob = null;
                  try {
-                    const thumbData = await extractThumbnail(file);
+                    const thumbData = await extractThumbnail(file, workerObj);
                     // LibRaw usually extracts embedded JPEG.
                     thumbBlob = new Blob([thumbData.data], { type: 'image/jpeg' });
                  } catch (thumbErr) {
                      console.warn("Thumbnail extraction failed for", file.name, thumbErr);
+                 } finally {
+                     if (workerObj) workerObj.busy = false;
                  }
 
                  // 2. Save to DB
                  await storage.addImage(file, thumbBlob, id);
-                 if (!firstAddedId) firstAddedId = id;
+                 return id;
 
              } catch (err) {
                  console.error("Failed to add photo", err);
                  setError(err.message);
-                 // If limit reached, break
-                 if (err.message.includes("limit") || err.message.includes("full")) break;
+                 return null;
              }
+        };
+
+        // Parallel Execution
+        const results = await Promise.all(fileList.map(file => limit(() => processFile(file))));
+
+        // Find first valid ID (preserving order of fileList)
+        const validIds = results.filter(id => id !== null);
+        if (validIds.length > 0) {
+            firstAddedId = validIds[0];
         }
+
         await refreshImages();
         setIsProcessing(false);
         return firstAddedId;
