@@ -2,7 +2,7 @@
 
 [English](README_en.md) | [简体中文](README.md)
 
-**Nitrate Grain** is a minimal, high-performance RAW image editor and color grading tool for the web.
+**Nitrate Grain** is a RAW image editor and color grading tool for the web. This is an exploratory project created out of personal interest.
 
 ## ⚠️ Disclaimer
 
@@ -19,7 +19,7 @@ This project is a secondary development (Fork) of [Raw-Alchemy](https://github.c
 -   **Color Grading**: Supports 3D LUT (.cube) files and Log color space transformations.
 -   **Local Gallery**: Built-in persistent gallery based on IndexedDB with thumbnail support.
 -   **PWA Support**: Installable as a Progressive Web App (PWA), works offline, and supports the Share Target API (share images from other apps to this one).
--   **Privacy First**: All image processing is done locally in your browser; no images are uploaded to any server.
+-   **Local Processing**: All image processing is done locally in your browser; no images are uploaded to any server.
 
 ## 🚀 Deployment Guide (Vercel)
 
