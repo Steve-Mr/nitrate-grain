@@ -1,6 +1,6 @@
 # Nitrate Grain
 
-[English](README_en.md) | [简体中文](README.md)
+English | [简体中文](README.md)
 
 **Nitrate Grain** is a RAW image editor and color grading tool for the web. This is an exploratory project created out of personal interest.
 

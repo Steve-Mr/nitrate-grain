@@ -1,6 +1,6 @@
 # Nitrate Grain
 
-[English](README_en.md) | [简体中文](README.md)
+[English](README_en.md) | 简体中文
 
 **Nitrate Grain** 是一个运行在 Web 端的 RAW 图像编辑器和色彩分级工具。这是一个出于个人兴趣的探索性项目。
 
