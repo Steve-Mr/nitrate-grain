@@ -230,7 +230,8 @@ self.onmessage = async (e) => {
       console.log("Worker: Normalized Metadata:", {
           cam_xyz: meta.cam_xyz,
           rgb_cam: meta.rgb_cam,
-          cam_mul: meta.cam_mul
+          cam_mul: meta.cam_mul,
+          timestamp: meta.other ? meta.other.timestamp : undefined
       });
 
       let outputData;

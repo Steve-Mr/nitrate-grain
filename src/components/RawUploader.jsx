@@ -76,7 +76,8 @@ const RawUploader = () => {
       highlights: 0.0, shadows: 0.0, whites: 0.0, blacks: 0.0,
       inputGamma: 1.0,
       lutData: null, lutSize: null,
-      targetLogSpace: 'None'
+      targetLogSpace: 'None',
+      timestamp: null
   });
   const [batchMatrices, setBatchMatrices] = useState({
       camToProPhoto: null,
@@ -120,6 +121,7 @@ const RawUploader = () => {
   // Refs for safe state persistence
   const currentAdjustmentsRef = useRef(null);
   const lastSelectedIdRef = useRef(null);
+  const imageTimestampRef = useRef(null);
 
   // Handle Gallery Selection Change (Save Previous & Load New)
   useEffect(() => {
@@ -293,6 +295,7 @@ const RawUploader = () => {
 
       if (type === 'success') {
         setMetadata(meta);
+        imageTimestampRef.current = meta?.other?.timestamp;
 
         if (restoredAdjustments) {
             isRestoringRef.current = true;
@@ -414,7 +417,8 @@ const RawUploader = () => {
                   channels: 4,
                   logSpace: targetLogSpace,
                   format: exportFormat,
-                  quality: 0.95
+                  quality: 0.95,
+                  timestamp: imageTimestampRef.current
               }, [data.buffer]);
           } catch (err) {
               setError("Export Error: " + err.message);
@@ -497,7 +501,8 @@ const RawUploader = () => {
                       inputGamma: state?.inputGamma ?? 1.0,
                       lutData: state?.lutData ?? null,
                       lutSize: state?.lutSize ?? null,
-                      targetLogSpace: state?.targetLogSpace ?? 'None'
+                      targetLogSpace: state?.targetLogSpace ?? 'None',
+                      timestamp: decoded.meta?.other?.timestamp
                   };
 
                   if (!state) {
@@ -552,7 +557,8 @@ const RawUploader = () => {
                           channels: 4,
                           logSpace: adjustments.targetLogSpace,
                           format: exportFormat,
-                          quality: 0.95
+                          quality: 0.95,
+                          timestamp: adjustments.timestamp
                        }, [result.data.buffer]);
                   });
 
@@ -565,10 +571,22 @@ const RawUploader = () => {
                   const filename = `${safeName}.${ext}`;
 
                   if (useFileSystem && dirHandle) {
-                      const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-                      const writable = await fileHandle.createWritable();
-                      await writable.write(exportedBlob);
-                      await writable.close();
+                      let fileHandle;
+                      try {
+                          fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+                          const writable = await fileHandle.createWritable();
+                          await writable.write(exportedBlob);
+                          await writable.close();
+                      } catch (err) {
+                          console.error(`Direct write failed for ${filename}, falling back to ZIP:`, err);
+
+                          // Fallback logic
+                          if (!zip) {
+                               const JSZipModule = await import('jszip');
+                               zip = new JSZipModule.default();
+                          }
+                          zip.file(filename, exportedBlob);
+                      }
                   } else if (zip) {
                       zip.file(filename, exportedBlob);
                   }

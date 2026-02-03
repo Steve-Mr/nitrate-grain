@@ -7,26 +7,37 @@
  * @param {number} height - Image height
  * @param {Uint16Array} data - Interleaved RGB data (R, G, B, R, G, B...)
  * @param {string} [description] - Optional image description (e.g., Log Space name)
+ * @param {Object} [metadata] - Optional metadata (e.g., { timestamp: "YYYY:MM:DD HH:MM:SS" })
  * @returns {ArrayBuffer} - The TIFF file binary
  */
-export function encodeTiff(width, height, data, description = "") {
+export function encodeTiff(width, height, data, description = "", metadata = {}) {
     const headerSize = 8;
-    // IFD Entries: 12 base + 1 optional (ImageDescription)
+
+    // IFD Entries calculation
     const hasDesc = description && description.length > 0;
-    const ifdEntryCount = hasDesc ? 13 : 12;
+    const hasDate = metadata && metadata.timestamp && metadata.timestamp.length > 0;
+
+    // Base entries: 12
+    // Optional: ImageDescription (+1), DateTime (+1)
+    const ifdEntryCount = 12 + (hasDesc ? 1 : 0) + (hasDate ? 1 : 0);
+
     const ifdSize = 2 + (ifdEntryCount * 12) + 4; // Count + Entries + NextOffset
 
-    // Extra values storage (BitsPerSample, XRes, YRes, DescriptionString)
+    // Extra values storage (BitsPerSample, XRes, YRes, DescriptionString, DateTimeString)
     // BitsPerSample: 3 * 2 bytes = 6 bytes
     // XResolution: 2 * 4 bytes = 8 bytes (Rational)
     // YResolution: 2 * 4 bytes = 8 bytes (Rational)
     // Description: Length + 1 (null terminator)
-    // Total Extra = 22 bytes + Description Bytes
-    const descBytes = hasDesc ? new TextEncoder().encode(description + "\0") : new Uint8Array(0);
-    // Align description to 2 bytes (Short alignment) - Optional but good practice?
-    // TIFF strings are just bytes.
+    // DateTime: Length + 1 (null terminator)
 
-    const extraValuesSize = 22 + descBytes.length + (descBytes.length % 2); // Padding for word alignment if needed
+    const descBytes = hasDesc ? new TextEncoder().encode(description + "\0") : new Uint8Array(0);
+    const dateBytes = hasDate ? new TextEncoder().encode(metadata.timestamp + "\0") : new Uint8Array(0);
+
+    // Padding for alignment
+    const descPadding = descBytes.length % 2;
+    const datePadding = dateBytes.length % 2;
+
+    const extraValuesSize = 22 + descBytes.length + descPadding + dateBytes.length + datePadding;
 
     const pixelDataSize = data.byteLength;
     const totalSize = headerSize + ifdSize + extraValuesSize + pixelDataSize;
@@ -51,7 +62,14 @@ export function encodeTiff(width, height, data, description = "") {
     const bitsPerSampleOffset = extraValuesOffset;
     const xResOffset = extraValuesOffset + 6;
     const yResOffset = extraValuesOffset + 14;
-    const descOffset = extraValuesOffset + 22;
+
+    let currentExtraOffset = extraValuesOffset + 22;
+
+    const descOffset = hasDesc ? currentExtraOffset : 0;
+    currentExtraOffset += descBytes.length + descPadding;
+
+    const dateOffset = hasDate ? currentExtraOffset : 0;
+    currentExtraOffset += dateBytes.length + datePadding;
 
     const pixelDataOffset = extraValuesOffset + extraValuesSize;
 
@@ -111,6 +129,11 @@ export function encodeTiff(width, height, data, description = "") {
     // 296: ResolutionUnit
     writeTag(296, 3, 1, 2);
 
+    // 306: DateTime (Optional)
+    if (hasDate) {
+        writeTag(306, 2, dateBytes.length, dateOffset);
+    }
+
     // Next IFD Offset (0 = None)
     view.setUint32(offset, 0, true);
     offset += 4;
@@ -134,9 +157,19 @@ export function encodeTiff(width, height, data, description = "") {
         const descView = new Uint8Array(buffer, offset, descBytes.length);
         descView.set(descBytes);
         offset += descBytes.length;
-        // Padding if odd (though we calculated totalSize with modulo, so buffer is big enough)
-        if (descBytes.length % 2 !== 0) {
-            view.setUint8(offset, 0); // Pad with null
+        if (descPadding) {
+            view.setUint8(offset, 0);
+            offset += 1;
+        }
+    }
+
+    // DateTime String (if exists)
+    if (hasDate) {
+        const dateView = new Uint8Array(buffer, offset, dateBytes.length);
+        dateView.set(dateBytes);
+        offset += dateBytes.length;
+        if (datePadding) {
+            view.setUint8(offset, 0);
             offset += 1;
         }
     }

@@ -1,13 +1,16 @@
 // src/workers/export.worker.js
 import { encodeTiff } from '../utils/tiffEncoder.js';
+import { formatExifDate, createExifBuffer, insertExifIntoJpeg } from '../utils/exifUtils.js';
 
 self.onmessage = async (e) => {
-    const { width, height, data, channels, logSpace, format = 'tiff', quality = 0.95 } = e.data;
+    const { width, height, data, channels, logSpace, format = 'tiff', quality = 0.95, timestamp } = e.data;
 
     try {
         if (!data || data.length === 0) {
             throw new Error("No data received for export");
         }
+
+        const dateString = timestamp ? formatExifDate(timestamp) : null;
 
         // --- TIFF EXPORT (16-bit) ---
         if (format === 'tiff') {
@@ -49,7 +52,8 @@ self.onmessage = async (e) => {
 
             // Encode to TIFF
             const description = logSpace ? `Log Space: ${logSpace}` : "Raw Alchemy Web Export";
-            const buffer = encodeTiff(width, height, uint16Data, description);
+            const metadata = { timestamp: dateString };
+            const buffer = encodeTiff(width, height, uint16Data, description, metadata);
 
             self.postMessage({ type: 'success', buffer }, [buffer]);
 
@@ -96,7 +100,21 @@ self.onmessage = async (e) => {
             const blob = await canvas.convertToBlob({ type: mimeType, quality });
 
             // Send back as ArrayBuffer
-            const buffer = await blob.arrayBuffer();
+            let buffer = await blob.arrayBuffer();
+
+            // Insert EXIF for JPEG
+            if (format === 'jpeg' && dateString) {
+                try {
+                    const exifBlock = createExifBuffer(dateString);
+                    if (exifBlock) {
+                        buffer = insertExifIntoJpeg(buffer, exifBlock);
+                    }
+                } catch (exifErr) {
+                    console.error("EXIF insertion failed:", exifErr);
+                    // Continue without EXIF
+                }
+            }
+
             self.postMessage({ type: 'success', buffer }, [buffer]);
         }
 
