@@ -18,10 +18,26 @@ export function encodeTiff(width, height, data, description = "", metadata = {})
     const hasDate = metadata && metadata.timestamp && metadata.timestamp.length > 0;
 
     // Base entries: 12
-    // Optional: ImageDescription (+1), DateTime (+1)
-    const ifdEntryCount = 12 + (hasDesc ? 1 : 0) + (hasDate ? 1 : 0);
+    // Optional: ImageDescription (+1), DateTime (+1), DateTimeOriginal (+1)
+    // We add DateTimeOriginal (Tag 36867) to main IFD as well for broad compatibility.
+    // NOTE: Strictly, it belongs in Exif SubIFD, but some readers check here.
+    // However, creating a SubIFD is cleaner.
+    // For now, let's just add the standard DateTime (306) which we already did.
+    // Let's ALSO add DateTimeOriginal (36867) to the main IFD just in case?
+    // Tag 36867 is private Exif tag. But often seen in root IFD in loose implementations.
+    // Let's stick to just 306 in IFD0, but actually write the *original* timestamp there.
 
-    const ifdSize = 2 + (ifdEntryCount * 12) + 4; // Count + Entries + NextOffset
+    // WAIT: The user specifically said "exif info time" is download time.
+    // Tag 306 is "Modify Date".
+    // We should probably add Exif SubIFD to be robust.
+    // BUT, that requires a lot more logic (offset to SubIFD).
+
+    // Compromise: Add Tag 36867 (DateTimeOriginal) to the main IFD.
+    // Some strict parsers might ignore it, but many read it.
+
+    const ifdEntryCount = 12 + (hasDesc ? 1 : 0) + (hasDate ? 2 : 0); // Date + DateOriginal
+
+    const ifdSize = 2 + (ifdEntryCount * 12) + 4;
 
     // Extra values storage (BitsPerSample, XRes, YRes, DescriptionString, DateTimeString)
     // BitsPerSample: 3 * 2 bytes = 6 bytes
@@ -132,6 +148,11 @@ export function encodeTiff(width, height, data, description = "", metadata = {})
     // 306: DateTime (Optional)
     if (hasDate) {
         writeTag(306, 2, dateBytes.length, dateOffset);
+    }
+
+    // 36867: DateTimeOriginal (Optional) - Added to IFD0 for compatibility
+    if (hasDate) {
+        writeTag(36867, 2, dateBytes.length, dateOffset);
     }
 
     // Next IFD Offset (0 = None)

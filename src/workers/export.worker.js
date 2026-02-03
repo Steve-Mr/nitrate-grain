@@ -1,6 +1,8 @@
 // src/workers/export.worker.js
 import { encodeTiff } from '../utils/tiffEncoder.js';
-import { formatExifDate, createExifBuffer, insertExifIntoJpeg } from '../utils/exifUtils.js';
+import { formatExifDate, createJpegApp1Buffer, insertExifIntoJpeg, createRawExifBlock } from '../utils/exifUtils.js';
+import { insertExifIntoPng } from '../utils/pngMetadata.js';
+import { insertExifIntoWebpWithDimensions } from '../utils/webpMetadata.js';
 
 self.onmessage = async (e) => {
     const { width, height, data, channels, logSpace, format = 'tiff', quality = 0.95, timestamp } = e.data;
@@ -102,16 +104,27 @@ self.onmessage = async (e) => {
             // Send back as ArrayBuffer
             let buffer = await blob.arrayBuffer();
 
-            // Insert EXIF for JPEG
-            if (format === 'jpeg' && dateString) {
+            // Insert EXIF
+            if (dateString) {
                 try {
-                    const exifBlock = createExifBuffer(dateString);
-                    if (exifBlock) {
-                        buffer = insertExifIntoJpeg(buffer, exifBlock);
+                    if (format === 'jpeg') {
+                        const exifBlock = createJpegApp1Buffer(dateString);
+                        if (exifBlock) {
+                            buffer = insertExifIntoJpeg(buffer, exifBlock);
+                        }
+                    } else if (format === 'png') {
+                        const rawExif = createRawExifBlock(dateString);
+                        if (rawExif) {
+                            buffer = insertExifIntoPng(buffer, rawExif);
+                        }
+                    } else if (format === 'webp') {
+                         const rawExif = createRawExifBlock(dateString);
+                         if (rawExif) {
+                             buffer = insertExifIntoWebpWithDimensions(buffer, rawExif, width, height);
+                         }
                     }
                 } catch (exifErr) {
                     console.error("EXIF insertion failed:", exifErr);
-                    // Continue without EXIF
                 }
             }
 
