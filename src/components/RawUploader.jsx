@@ -296,9 +296,21 @@ const RawUploader = () => {
 
         if (restoredAdjustments) {
             isRestoringRef.current = true;
-            setWbRed(restoredAdjustments.wbRed ?? 1.0);
-            setWbGreen(restoredAdjustments.wbGreen ?? 1.0);
-            setWbBlue(restoredAdjustments.wbBlue ?? 1.0);
+
+            // Pipeline Version Check for White Balance Compatibility
+            // Version 0 (undefined): LibRaw used UnitWB, Shader did Absolute WB.
+            // Version 1+: LibRaw uses CameraWB, Shader does Relative WB Offset.
+            if (restoredAdjustments.pipelineVersion >= 1) {
+                setWbRed(restoredAdjustments.wbRed ?? 1.0);
+                setWbGreen(restoredAdjustments.wbGreen ?? 1.0);
+                setWbBlue(restoredAdjustments.wbBlue ?? 1.0);
+            } else {
+                // Force reset WB for legacy states to prevent double-application
+                setWbRed(1.0);
+                setWbGreen(1.0);
+                setWbBlue(1.0);
+            }
+
             setHighlights(restoredAdjustments.highlights ?? 0.0);
             setShadows(restoredAdjustments.shadows ?? 0.0);
             setWhites(restoredAdjustments.whites ?? 0.0);
@@ -483,10 +495,13 @@ const RawUploader = () => {
                        }).catch(reject);
                   });
 
+                  // Version Check for Batch Export
+                  const useNewWB = state && state.pipelineVersion && state.pipelineVersion >= 1;
+
                   const adjustments = {
-                      wbRed: state?.wbRed ?? 1.0,
-                      wbGreen: state?.wbGreen ?? 1.0,
-                      wbBlue: state?.wbBlue ?? 1.0,
+                      wbRed: useNewWB ? (state.wbRed ?? 1.0) : 1.0,
+                      wbGreen: useNewWB ? (state.wbGreen ?? 1.0) : 1.0,
+                      wbBlue: useNewWB ? (state.wbBlue ?? 1.0) : 1.0,
                       exposure: state?.exposure ?? 0.0,
                       contrast: state?.contrast ?? 1.0,
                       saturation: state?.saturation ?? 1.0,
