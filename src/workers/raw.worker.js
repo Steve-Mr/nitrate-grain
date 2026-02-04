@@ -182,8 +182,6 @@ self.onmessage = async (e) => {
         use_camera_wb: true,
         useAutoWb: false,
         use_auto_wb: false,
-        userMul: [1.0, 1.0, 1.0, 1.0],
-        user_mul: [1.0, 1.0, 1.0, 1.0],
       };
 
       if (mode === 'bayer') {
