@@ -18,6 +18,7 @@ import ExportControls from './controls/ExportControls';
 import AdvancedControls from './controls/AdvancedControls';
 import BatchExportModal from './modals/BatchExportModal';
 import { UploadCloud, History } from 'lucide-react';
+import DebugConsole from './debug/DebugConsole';
 
 const RawUploader = () => {
   const { t } = useTranslation();
@@ -104,6 +105,14 @@ const RawUploader = () => {
 
   // Sidebar State
   const [isGalleryCollapsed, setIsGalleryCollapsed] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Listen for global debug toggle
+  useEffect(() => {
+    const toggleDebug = () => setShowDebug(prev => !prev);
+    window.addEventListener('toggle-debug-console', toggleDebug);
+    return () => window.removeEventListener('toggle-debug-console', toggleDebug);
+  }, []);
 
   // Auto-collapse sidebar
   useEffect(() => {
@@ -289,7 +298,13 @@ const RawUploader = () => {
     workerRef.current = new Worker(new URL('../workers/raw.worker.js', import.meta.url), { type: 'module' });
 
     workerRef.current.onmessage = (e) => {
-      const { type, data, width, height, channels, bitDepth, error: workerError, mode: resultMode, meta } = e.data;
+      const { type, data, width, height, channels, bitDepth, error: workerError, mode: resultMode, meta, message, level } = e.data;
+
+      if (type === 'log') {
+          if (level === 'error') logger.error(message);
+          else logger.log(message);
+          return;
+      }
 
       if (type === 'success') {
         setMetadata(meta);
@@ -380,7 +395,14 @@ const RawUploader = () => {
               exportWorkerRef.current = new Worker(new URL('../workers/export.worker.js', import.meta.url), { type: 'module' });
 
               exportWorkerRef.current.onmessage = (e) => {
-                  const { type, buffer, message } = e.data;
+                  const { type, buffer, message, level } = e.data;
+
+                  if (type === 'log') {
+                      if (level === 'error') logger.error(message);
+                      else logger.log(message);
+                      return;
+                  }
+
                   if (type === 'success') {
                       const mimeType = exportFormat === 'tiff' ? 'image/tiff' : `image/${exportFormat}`;
                       const blob = new Blob([buffer], { type: mimeType });
@@ -764,6 +786,7 @@ const RawUploader = () => {
             />
         }}
     >
+        {showDebug && <DebugConsole onClose={() => setShowDebug(false)} />}
         {imageState && (
             <div
                 className="relative w-full h-full flex items-center justify-center select-none"

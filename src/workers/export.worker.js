@@ -4,22 +4,31 @@ import {
     initializeImageMagick,
     MagickFormat
 } from '@imagemagick/magick-wasm';
+import { buildExifBuffer } from '../utils/exifWriter.js';
 
 let isInitialized = false;
+
+const log = (msg) => self.postMessage({ type: 'log', message: `Export Worker: ${msg}` });
+const error = (msg) => self.postMessage({ type: 'log', message: `Export Worker Error: ${msg}`, level: 'error' });
 
 self.onmessage = async (e) => {
     const { width, height, data, channels, logSpace, format = 'tiff', quality = 0.95, exifData } = e.data;
 
     try {
+        log(`Starting export ${width}x${height} ${format.toUpperCase()}`);
+        if (exifData) log(`Received Metadata: ${JSON.stringify(exifData)}`);
+
         if (!data || data.length === 0) {
             throw new Error("No data received for export");
         }
 
         if (!isInitialized) {
+            log("Initializing ImageMagick WASM...");
             // Locate wasm file in public directory
             const wasmUrl = new URL('/magick.wasm', self.location.origin);
             await initializeImageMagick(wasmUrl);
             isInitialized = true;
+            log("ImageMagick Initialized.");
         }
 
         // Determine Bit Depth for export
@@ -69,26 +78,21 @@ self.onmessage = async (e) => {
             // 1. Flip Vertical (correct WebGL coordinates)
             image.flip();
 
-            // 2. Set Metadata
+            // 2. Set Metadata (Binary Profile)
             if (exifData) {
-                // Common EXIF Tags
-                // ImageMagick setAttribute("exif:TagName", val)
-
-                const setTag = (tag, val) => {
-                    if (val !== undefined && val !== null) {
-                         image.setAttribute(`exif:${tag}`, String(val));
+                try {
+                    const exifProfile = buildExifBuffer(exifData);
+                    if (exifProfile) {
+                        image.setProfile('exif', exifProfile);
+                        log(`Attached EXIF Profile (${exifProfile.length} bytes)`);
+                    } else {
+                        log("Failed to build EXIF profile (empty result).");
                     }
-                };
-
-                Object.entries(exifData).forEach(([key, value]) => {
-                     setTag(key, value);
-                });
-
-                // Explicit standard attributes if needed (Make, Model)
-                // (Setting exif:Make usually suffices for the EXIF profile,
-                // but setting the IM property might help some readers)
-                if (exifData.Make) image.setAttribute('Make', String(exifData.Make));
-                if (exifData.Model) image.setAttribute('Model', String(exifData.Model));
+                } catch (exifErr) {
+                    error(`EXIF Construction Failed: ${exifErr.message}`);
+                }
+            } else {
+                log("No EXIF data to attach.");
             }
 
             // 3. Configure Output
@@ -122,6 +126,7 @@ self.onmessage = async (e) => {
 
     } catch (err) {
         console.error("Export Worker Error:", err);
+        error(err.message);
         self.postMessage({ type: 'error', message: err.message });
     }
 };

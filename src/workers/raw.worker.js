@@ -1,6 +1,8 @@
 import LibRaw from 'libraw-wasm';
 import { parseExif } from '../utils/exifParser.js';
 
+const log = (msg) => self.postMessage({ type: 'log', message: `Raw Worker: ${msg}` });
+
 let decoder = null;
 
 // Helper to downscale image data to thumbnail size
@@ -162,11 +164,11 @@ self.onmessage = async (e) => {
   } else if (command === 'decode') {
     try {
       if (!decoder) {
-        console.log("Worker: Initializing LibRaw...");
+        log("Initializing LibRaw...");
         decoder = new LibRaw();
       }
 
-      console.log(`Worker: Processing started (Mode: ${mode})`);
+      log(`Processing started (Mode: ${mode})`);
 
       const settings = {
         outputColor: 4,
@@ -191,18 +193,18 @@ self.onmessage = async (e) => {
           // For bayer mode, settings are less critical as we unpack raw data
       }
 
-      console.log("Worker: Opening file with settings:", settings);
+      log(`Opening file with settings: ${JSON.stringify(settings)}`);
 
       // Parse EXIF (Custom Parser)
       const exifData = parseExif(fileBuffer);
-      console.log("Worker: EXIF Data extracted:", exifData);
+      log(`EXIF Data extracted: ${JSON.stringify(exifData)}`);
 
       await decoder.open(new Uint8Array(fileBuffer), settings);
-      console.log("Worker: File opened successfully");
+      log("File opened successfully");
 
       const meta = await decoder.metadata(true);
       meta.exif = exifData; // Attach EXIF to metadata
-      console.log("Worker: Metadata retrieved", meta);
+      log(`Metadata retrieved. ISO: ${meta.iso_speed}, Shutter: ${meta.shutter}`);
 
       const flattenMatrix = (mat) => {
           if (!mat || !Array.isArray(mat)) return mat;

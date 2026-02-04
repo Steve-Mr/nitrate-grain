@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Github } from 'lucide-react';
 import logo from '../assets/app_logo.png';
 
-const InfoModal = ({ isOpen, onClose }) => {
+const InfoModal = ({ isOpen, onClose, onShowDebug }) => {
   const { t } = useTranslation();
 
   return (
@@ -42,7 +42,13 @@ const InfoModal = ({ isOpen, onClose }) => {
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
                   {t('appTitle')}
                 </h2>
-                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em]">
+                <p
+                    className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] cursor-pointer"
+                    onDoubleClick={() => {
+                        onShowDebug && onShowDebug();
+                        onClose();
+                    }}
+                >
                   {t('slogan')}
                 </p>
               </div>
