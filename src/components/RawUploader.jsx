@@ -181,6 +181,7 @@ const RawUploader = () => {
     if (!imageState) return;
 
     const adjustments = {
+      pipelineVersion: 1,
       wbRed, wbGreen, wbBlue,
       exposure, contrast, saturation,
       highlights, shadows, whites, blacks,
@@ -306,9 +307,7 @@ const RawUploader = () => {
                 setWbBlue(restoredAdjustments.wbBlue ?? 1.0);
             } else {
                 // Force reset WB for legacy states to prevent double-application
-                setWbRed(1.0);
-                setWbGreen(1.0);
-                setWbBlue(1.0);
+                resetWB();
             }
 
             setHighlights(restoredAdjustments.highlights ?? 0.0);
