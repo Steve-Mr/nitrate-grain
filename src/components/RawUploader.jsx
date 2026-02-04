@@ -786,7 +786,6 @@ const RawUploader = () => {
             />
         }}
     >
-        {showDebug && <DebugConsole onClose={() => setShowDebug(false)} />}
         {imageState && (
             <div
                 className="relative w-full h-full flex items-center justify-center select-none"
@@ -832,6 +831,8 @@ const RawUploader = () => {
             </div>
         )}
     </ResponsiveLayout>
+
+    {showDebug && <DebugConsole onClose={() => setShowDebug(false)} />}
 
     <BatchExportModal
         isOpen={isBatchModalOpen}
