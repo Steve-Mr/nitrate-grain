@@ -16,7 +16,10 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-icon-512x512.png', 'libraw.wasm'],
+      injectManifest: {
+        maximumFileSizeToCacheInBytes: 20000000
+      },
+      includeAssets: ['favicon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-icon-512x512.png', 'libraw.wasm', 'magick.wasm'],
       manifest: {
         name: 'Nitrate Grain',
         short_name: 'Nitrate Grain',

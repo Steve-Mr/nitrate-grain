@@ -1,4 +1,5 @@
 import LibRaw from 'libraw-wasm';
+import { parseExif } from '../utils/exifParser.js';
 
 let decoder = null;
 
@@ -191,10 +192,16 @@ self.onmessage = async (e) => {
       }
 
       console.log("Worker: Opening file with settings:", settings);
+
+      // Parse EXIF (Custom Parser)
+      const exifData = parseExif(fileBuffer);
+      console.log("Worker: EXIF Data extracted:", exifData);
+
       await decoder.open(new Uint8Array(fileBuffer), settings);
       console.log("Worker: File opened successfully");
 
       const meta = await decoder.metadata(true);
+      meta.exif = exifData; // Attach EXIF to metadata
       console.log("Worker: Metadata retrieved", meta);
 
       const flattenMatrix = (mat) => {

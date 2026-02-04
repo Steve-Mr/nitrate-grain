@@ -414,7 +414,8 @@ const RawUploader = () => {
                   channels: 4,
                   logSpace: targetLogSpace,
                   format: exportFormat,
-                  quality: 0.95
+                  quality: 0.95,
+                  exifData: metadata?.exif
               }, [data.buffer]);
           } catch (err) {
               setError("Export Error: " + err.message);
@@ -552,7 +553,8 @@ const RawUploader = () => {
                           channels: 4,
                           logSpace: adjustments.targetLogSpace,
                           format: exportFormat,
-                          quality: 0.95
+                          quality: 0.95,
+                          exifData: decoded.meta?.exif
                        }, [result.data.buffer]);
                   });
 
