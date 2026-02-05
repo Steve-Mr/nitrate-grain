@@ -630,6 +630,7 @@ const RawUploader = () => {
                   let savedViaFSA = false;
 
                   if (enableFSA && dirHandle && !fallbackToZip) {
+                      let fsaError = null;
                       try {
                           const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
                           try {
@@ -638,6 +639,7 @@ const RawUploader = () => {
                               await writable.close();
                               savedViaFSA = true;
                           } catch (writeErr) {
+                              fsaError = writeErr;
                               console.warn(`FSA Write failed for ${filename}, attempting cleanup...`, writeErr);
                               // Try to delete the empty file if write failed
                               try {
@@ -645,10 +647,13 @@ const RawUploader = () => {
                               } catch (delErr) {
                                   console.warn("Failed to clean up empty file:", delErr);
                               }
-                              throw writeErr; // Trigger fallback
                           }
                       } catch (err) {
-                          console.error(`FSA failed for ${id}, switching to ZIP fallback:`, err);
+                          fsaError = err;
+                      }
+
+                      if (fsaError) {
+                          console.error(`FSA failed for ${id}, switching to ZIP fallback:`, fsaError);
                           fallbackToZip = true;
                       }
                   }
