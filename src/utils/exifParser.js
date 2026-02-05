@@ -23,17 +23,6 @@ const TAGS = {
     0xa434: 'LensModel'
 };
 
-const TYPES = {
-    1: 'BYTE',      // 8-bit unsigned integer
-    2: 'ASCII',     // 8-bit byte that contains a 7-bit ASCII code; the last byte must be NUL (binary zero)
-    3: 'SHORT',     // 16-bit (2-byte) unsigned integer
-    4: 'LONG',      // 32-bit (4-byte) unsigned integer
-    5: 'RATIONAL',  // Two LONGs: the first represents the numerator of a fraction; the second, the denominator
-    7: 'UNDEFINED', // An 8-bit byte that can take any value depending on the field definition
-    9: 'SLONG',     // 32-bit (4-byte) signed integer (2's complement notation)
-    10: 'SRATIONAL' // Two SLONGs: the first represents the numerator of a fraction, the second the denominator
-};
-
 const TYPE_SIZES = {
     1: 1,
     2: 1,

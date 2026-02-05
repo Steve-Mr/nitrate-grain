@@ -19,6 +19,7 @@ import AdvancedControls from './controls/AdvancedControls';
 import BatchExportModal from './modals/BatchExportModal';
 import { UploadCloud, History } from 'lucide-react';
 import DebugConsole from './debug/DebugConsole';
+import { logger } from '../utils/logger';
 
 const RawUploader = () => {
   const { t } = useTranslation();
@@ -424,7 +425,7 @@ const RawUploader = () => {
                   }
               };
 
-              exportWorkerRef.current.onerror = (err) => {
+              exportWorkerRef.current.onerror = (_err) => {
                   setError("Export Worker crashed.");
                   setExporting(false);
               };
@@ -462,7 +463,7 @@ const RawUploader = () => {
           if (useFileSystem) {
                try {
                    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-               } catch (e) {
+               } catch (_e) {
                    setBatchProcessing(false);
                    return;
                }
@@ -585,7 +586,7 @@ const RawUploader = () => {
                   const logSuffix = adjustments.targetLogSpace === 'None' ? '' : `_${adjustments.targetLogSpace.replace(/\s+/g, '-')}`;
                   const ext = exportFormat === 'tiff' ? 'tiff' : exportFormat === 'jpeg' ? 'jpg' : exportFormat;
                   // Sanitize filename for compatibility
-                  const safeName = `${baseName}${logSuffix}`.replace(/[^a-z0-9_\-\.]/gi, '_');
+                  const safeName = `${baseName}${logSuffix}`.replace(/[^a-z0-9_\-.]/gi, '_');
                   const filename = `${safeName}.${ext}`;
 
                   if (useFileSystem && dirHandle) {
