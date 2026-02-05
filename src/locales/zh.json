@@ -62,7 +62,10 @@
     "keep": "保留",
     "select_all": "全选",
     "deselect_all": "取消全选",
-    "no_selection": "未选择图片"
+    "no_selection": "未选择图片",
+    "advanced_settings": "高级设置",
+    "enable_fsa": "启用文件系统访问 API",
+    "enable_fsa_desc": "直接保存到文件夹 (仅 Chrome/Edge)。实验性功能。"
   },
   "advanced": {
     "title": "高级",

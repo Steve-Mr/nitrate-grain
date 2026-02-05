@@ -62,6 +62,7 @@ const RawUploader = () => {
   const [proPhotoToTargetMat, setProPhotoToTargetMat] = useState(null);
   const [targetLogSpace, setTargetLogSpace] = useState('None');
   const [exportFormat, setExportFormat] = useState('tiff');
+  const [enableFSA, setEnableFSA] = useState(false); // Default false per user request
 
   const [exporting, setExporting] = useState(false);
 
@@ -469,17 +470,23 @@ const RawUploader = () => {
       let dirHandle = null;
       let zip = null;
       let fallbackToZip = false;
-      const useFileSystem = 'showDirectoryPicker' in window;
+
+      // Initial logger for debugging
+      logger.log(`Starting Batch Export. Count: ${selectedIds.length}`);
 
       try {
-          if (useFileSystem) {
+          // If enabled and supported, try to get handle
+          if (enableFSA && 'showDirectoryPicker' in window) {
                try {
                    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-               } catch {
+                   logger.log("Directory handle obtained.");
+               } catch (err) {
+                   logger.error(`Dir Picker Cancelled/Failed: ${err.message}`);
                    setBatchProcessing(false);
                    return;
                }
           } else {
+               logger.log("Initializing JSZip...");
                const JSZipModule = await import('jszip');
                zip = new JSZipModule.default();
           }
@@ -606,7 +613,7 @@ const RawUploader = () => {
 
                   let savedViaFSA = false;
 
-                  if (useFileSystem && dirHandle && !fallbackToZip) {
+                  if (enableFSA && dirHandle && !fallbackToZip) {
                       try {
                           const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
                           try {
@@ -632,9 +639,11 @@ const RawUploader = () => {
 
                   if (!savedViaFSA) {
                       if (!zip) {
+                          logger.log("Lazy initializing JSZip for fallback...");
                           const JSZipModule = await import('jszip');
                           zip = new JSZipModule.default();
                       }
+                      logger.log(`Adding to ZIP: ${filename} (${exportedBlob.size} bytes)`);
                       zip.file(filename, exportedBlob);
                   }
 
@@ -642,12 +651,15 @@ const RawUploader = () => {
                   processedIds.push(id);
 
               } catch (err) {
+                  logger.error(`Error exporting ${id}: ${err.message}`);
                   console.error(`Error exporting ${id}:`, err);
               }
           }
 
           if (zip && successCount > 0) {
+              logger.log("Generating final ZIP archive...");
               const content = await zip.generateAsync({ type: "blob" });
+              logger.log(`ZIP Generated. Size: ${content.size}`);
               const a = document.createElement("a");
               a.href = URL.createObjectURL(content);
               a.download = "batch_export.zip";
@@ -819,6 +831,7 @@ const RawUploader = () => {
                 exportFormat={exportFormat} setExportFormat={setExportFormat}
                 handleExport={handleExport} exporting={exporting}
                 onBatchExport={handleBatchExportClick}
+                enableFSA={enableFSA} setEnableFSA={setEnableFSA}
             />,
             advanced: <AdvancedControls
                 inputGamma={inputGamma} setInputGamma={setInputGamma}
