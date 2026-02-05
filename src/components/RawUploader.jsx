@@ -493,9 +493,21 @@ const RawUploader = () => {
 
           if (batchWorkerRef.current) batchWorkerRef.current.terminate();
           batchWorkerRef.current = new Worker(new URL('../workers/raw.worker.js', import.meta.url), { type: 'module' });
+          batchWorkerRef.current.addEventListener('message', (e) => {
+             if (e.data.type === 'log') {
+                 if (e.data.level === 'error') logger.error(e.data.message);
+                 else logger.log(e.data.message);
+             }
+          });
 
           if (batchExportWorkerRef.current) batchExportWorkerRef.current.terminate();
           batchExportWorkerRef.current = new Worker(new URL('../workers/export.worker.js', import.meta.url), { type: 'module' });
+          batchExportWorkerRef.current.addEventListener('message', (e) => {
+             if (e.data.type === 'log') {
+                 if (e.data.level === 'error') logger.error(e.data.message);
+                 else logger.log(e.data.message);
+             }
+          });
 
           let successCount = 0;
           const processedIds = [];
@@ -514,10 +526,10 @@ const RawUploader = () => {
                        const worker = batchWorkerRef.current;
                        const msgId = Date.now();
                        const handler = (e) => {
-                           if (e.data.id === msgId || (e.data.type === 'error' && e.data.error)) {
+                           if (e.data.id === msgId || (e.data.type === 'error' && (e.data.error || e.data.id === msgId))) {
                                worker.removeEventListener('message', handler);
                                if (e.data.type === 'success') resolve(e.data);
-                               else reject(e.data.error);
+                               else reject(e.data.error || 'Unknown Raw Worker Error');
                            }
                        };
                        worker.addEventListener('message', handler);
@@ -583,12 +595,16 @@ const RawUploader = () => {
                   const exportedBlob = await new Promise((resolve, reject) => {
                        const worker = batchExportWorkerRef.current;
                        const handler = (e) => {
+                           // Only handle success or task-specific error (if id matches or general failure)
+                           // Export worker usually sends one message per task, but let's be safe against logs
+                           if (e.data.type === 'log') return;
+
                            worker.removeEventListener('message', handler);
                            if (e.data.type === 'success') {
                                const mime = exportFormat === 'tiff' ? 'image/tiff' : `image/${exportFormat}`;
                                resolve(new Blob([e.data.buffer], { type: mime }));
                            }
-                           else reject(e.data.message);
+                           else reject(e.data.message || 'Unknown Export Worker Error');
                        };
                        worker.addEventListener('message', handler);
                        worker.postMessage({
