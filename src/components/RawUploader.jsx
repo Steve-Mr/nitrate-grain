@@ -468,6 +468,7 @@ const RawUploader = () => {
 
       let dirHandle = null;
       let zip = null;
+      let fallbackToZip = false;
       const useFileSystem = 'showDirectoryPicker' in window;
 
       try {
@@ -603,12 +604,37 @@ const RawUploader = () => {
                   const safeName = `${baseName}${logSuffix}`.replace(/[^a-z0-9_\-.]/gi, '_');
                   const filename = `${safeName}.${ext}`;
 
-                  if (useFileSystem && dirHandle) {
-                      const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-                      const writable = await fileHandle.createWritable();
-                      await writable.write(exportedBlob);
-                      await writable.close();
-                  } else if (zip) {
+                  let savedViaFSA = false;
+
+                  if (useFileSystem && dirHandle && !fallbackToZip) {
+                      try {
+                          const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+                          try {
+                              const writable = await fileHandle.createWritable();
+                              await writable.write(exportedBlob);
+                              await writable.close();
+                              savedViaFSA = true;
+                          } catch (writeErr) {
+                              console.warn(`FSA Write failed for ${filename}, attempting cleanup...`, writeErr);
+                              // Try to delete the empty file if write failed
+                              try {
+                                  await dirHandle.removeEntry(filename);
+                              } catch (delErr) {
+                                  console.warn("Failed to clean up empty file:", delErr);
+                              }
+                              throw writeErr; // Trigger fallback
+                          }
+                      } catch (err) {
+                          console.error(`FSA failed for ${id}, switching to ZIP fallback:`, err);
+                          fallbackToZip = true;
+                      }
+                  }
+
+                  if (!savedViaFSA) {
+                      if (!zip) {
+                          const JSZipModule = await import('jszip');
+                          zip = new JSZipModule.default();
+                      }
                       zip.file(filename, exportedBlob);
                   }
 
