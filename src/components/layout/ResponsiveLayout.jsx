@@ -19,6 +19,7 @@ const ResponsiveLayout = ({
   const [activeTab, setActiveTab] = useState('gallery'); // Default to gallery on mobile
   const [isMobile, setIsMobile] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -52,11 +53,21 @@ const ResponsiveLayout = ({
 
   const handleInfoClick = () => setShowInfo(true);
 
+  // Pass showDebug setter to InfoModal via a handler
+  const handleShowDebug = () => {
+    // Dispatch a custom event or use context if needed, but for now
+    // we might need to lift this state up or pass the setter down from RawUploader
+    // However, RawUploader manages the DebugConsole visibility itself.
+    // So we need to expose a prop 'onToggleDebug' to ResponsiveLayout
+    // But since RawUploader is parent, let's just assume we trigger an event
+    window.dispatchEvent(new CustomEvent('toggle-debug-console'));
+  };
+
   if (isMobile) {
     // MOBILE
     return (
       <div className="flex flex-col h-[100dvh] w-screen overflow-hidden bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-gray-100">
-        <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} />
+        <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} onShowDebug={handleShowDebug} />
 
         {/* Top: Image Area */}
         <div className="flex-1 relative bg-gray-100 dark:bg-black/95 flex items-center justify-center overflow-hidden transition-colors duration-300">
@@ -159,7 +170,7 @@ const ResponsiveLayout = ({
   // DESKTOP LAYOUT
   return (
     <div className="flex h-screen w-screen bg-surface-light dark:bg-surface-dark text-gray-900 dark:text-gray-100 overflow-hidden font-sans">
-      <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} />
+      <InfoModal isOpen={showInfo} onClose={() => setShowInfo(false)} onShowDebug={handleShowDebug} />
 
       {/* Left Column: Gallery Sidebar */}
       <div className="flex-none h-full z-20 shadow-xl relative">

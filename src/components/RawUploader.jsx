@@ -18,6 +18,8 @@ import ExportControls from './controls/ExportControls';
 import AdvancedControls from './controls/AdvancedControls';
 import BatchExportModal from './modals/BatchExportModal';
 import { UploadCloud, History } from 'lucide-react';
+import DebugConsole from './debug/DebugConsole';
+import { logger } from '../utils/logger';
 
 const RawUploader = () => {
   const { t } = useTranslation();
@@ -104,6 +106,14 @@ const RawUploader = () => {
 
   // Sidebar State
   const [isGalleryCollapsed, setIsGalleryCollapsed] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Listen for global debug toggle
+  useEffect(() => {
+    const toggleDebug = () => setShowDebug(prev => !prev);
+    window.addEventListener('toggle-debug-console', toggleDebug);
+    return () => window.removeEventListener('toggle-debug-console', toggleDebug);
+  }, []);
 
   // Auto-collapse sidebar
   useEffect(() => {
@@ -290,7 +300,13 @@ const RawUploader = () => {
     workerRef.current = new Worker(new URL('../workers/raw.worker.js', import.meta.url), { type: 'module' });
 
     workerRef.current.onmessage = (e) => {
-      const { type, data, width, height, channels, bitDepth, error: workerError, mode: resultMode, meta } = e.data;
+      const { type, data, width, height, channels, bitDepth, error: workerError, mode: resultMode, meta, message, level } = e.data;
+
+      if (type === 'log') {
+          if (level === 'error') logger.error(message);
+          else logger.log(message);
+          return;
+      }
 
       if (type === 'success') {
         setMetadata(meta);
@@ -391,7 +407,14 @@ const RawUploader = () => {
               exportWorkerRef.current = new Worker(new URL('../workers/export.worker.js', import.meta.url), { type: 'module' });
 
               exportWorkerRef.current.onmessage = (e) => {
-                  const { type, buffer, message } = e.data;
+                  const { type, buffer, message, level } = e.data;
+
+                  if (type === 'log') {
+                      if (level === 'error') logger.error(message);
+                      else logger.log(message);
+                      return;
+                  }
+
                   if (type === 'success') {
                       const mimeType = exportFormat === 'tiff' ? 'image/tiff' : `image/${exportFormat}`;
                       const blob = new Blob([buffer], { type: mimeType });
@@ -413,7 +436,7 @@ const RawUploader = () => {
                   }
               };
 
-              exportWorkerRef.current.onerror = (err) => {
+              exportWorkerRef.current.onerror = () => {
                   setError("Export Worker crashed.");
                   setExporting(false);
               };
@@ -425,7 +448,8 @@ const RawUploader = () => {
                   channels: 4,
                   logSpace: targetLogSpace,
                   format: exportFormat,
-                  quality: 0.95
+                  quality: 0.95,
+                  exifData: metadata?.exif
               }, [data.buffer]);
           } catch (err) {
               setError("Export Error: " + err.message);
@@ -450,7 +474,7 @@ const RawUploader = () => {
           if (useFileSystem) {
                try {
                    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-               } catch (e) {
+               } catch {
                    setBatchProcessing(false);
                    return;
                }
@@ -566,7 +590,8 @@ const RawUploader = () => {
                           channels: 4,
                           logSpace: adjustments.targetLogSpace,
                           format: exportFormat,
-                          quality: 0.95
+                          quality: 0.95,
+                          exifData: decoded.meta?.exif
                        }, [result.data.buffer]);
                   });
 
@@ -575,7 +600,7 @@ const RawUploader = () => {
                   const logSuffix = adjustments.targetLogSpace === 'None' ? '' : `_${adjustments.targetLogSpace.replace(/\s+/g, '-')}`;
                   const ext = exportFormat === 'tiff' ? 'tiff' : exportFormat === 'jpeg' ? 'jpg' : exportFormat;
                   // Sanitize filename for compatibility
-                  const safeName = `${baseName}${logSuffix}`.replace(/[^a-z0-9_\-\.]/gi, '_');
+                  const safeName = `${baseName}${logSuffix}`.replace(/[^a-z0-9_\-.]/gi, '_');
                   const filename = `${safeName}.${ext}`;
 
                   if (useFileSystem && dirHandle) {
@@ -821,6 +846,8 @@ const RawUploader = () => {
             </div>
         )}
     </ResponsiveLayout>
+
+    {showDebug && <DebugConsole onClose={() => setShowDebug(false)} />}
 
     <BatchExportModal
         isOpen={isBatchModalOpen}
