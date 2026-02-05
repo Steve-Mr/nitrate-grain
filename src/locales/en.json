@@ -62,7 +62,10 @@
     "keep": "Keep",
     "select_all": "Select All",
     "deselect_all": "Deselect All",
-    "no_selection": "No images selected"
+    "no_selection": "No images selected",
+    "advanced_settings": "Advanced Settings",
+    "enable_fsa": "Enable File System Access API",
+    "enable_fsa_desc": "Save directly to folder (Chrome/Edge only). Experimental."
   },
   "advanced": {
     "title": "Advanced",
