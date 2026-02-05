@@ -425,7 +425,7 @@ const RawUploader = () => {
                   }
               };
 
-              exportWorkerRef.current.onerror = (_err) => {
+              exportWorkerRef.current.onerror = () => {
                   setError("Export Worker crashed.");
                   setExporting(false);
               };
@@ -463,7 +463,7 @@ const RawUploader = () => {
           if (useFileSystem) {
                try {
                    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-               } catch (_e) {
+               } catch {
                    setBatchProcessing(false);
                    return;
                }

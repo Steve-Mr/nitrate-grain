@@ -23,15 +23,26 @@ const TAGS = {
     0xa434: 'LensModel'
 };
 
+const TIFF_TYPES = {
+    BYTE: 1,
+    ASCII: 2,
+    SHORT: 3,
+    LONG: 4,
+    RATIONAL: 5,
+    UNDEFINED: 7,
+    SLONG: 9,
+    SRATIONAL: 10
+};
+
 const TYPE_SIZES = {
-    1: 1,
-    2: 1,
-    3: 2,
-    4: 4,
-    5: 8,
-    7: 1,
-    9: 4,
-    10: 8
+    [TIFF_TYPES.BYTE]: 1,
+    [TIFF_TYPES.ASCII]: 1,
+    [TIFF_TYPES.SHORT]: 2,
+    [TIFF_TYPES.LONG]: 4,
+    [TIFF_TYPES.RATIONAL]: 8,
+    [TIFF_TYPES.UNDEFINED]: 1,
+    [TIFF_TYPES.SLONG]: 4,
+    [TIFF_TYPES.SRATIONAL]: 8
 };
 
 export function parseExif(buffer) {
@@ -63,7 +74,7 @@ export function parseExif(buffer) {
         // Helper to read values
         const readValue = (type, count, offset) => {
             switch (type) {
-                case 2: // ASCII
+                case TIFF_TYPES.ASCII: {
                     // Read string, ignore null terminator
                     let str = '';
                     for (let i = 0; i < count; i++) {
@@ -72,21 +83,24 @@ export function parseExif(buffer) {
                         str += String.fromCharCode(charCode);
                     }
                     return str;
+                }
 
-                case 3: // SHORT
+                case TIFF_TYPES.SHORT: {
                     if (count === 1) return dataView.getUint16(offset, littleEndian);
                     const shorts = [];
                     for(let i=0; i<count; i++) shorts.push(dataView.getUint16(offset + i*2, littleEndian));
                     return shorts;
+                }
 
-                case 4: // LONG
+                case TIFF_TYPES.LONG: {
                     if (count === 1) return dataView.getUint32(offset, littleEndian);
                     const longs = [];
                     for(let i=0; i<count; i++) longs.push(dataView.getUint32(offset + i*4, littleEndian));
                     return longs;
+                }
 
-                case 5: // RATIONAL
-                case 10: // SRATIONAL
+                case TIFF_TYPES.RATIONAL:
+                case TIFF_TYPES.SRATIONAL: {
                     if (count === 1) {
                         const num = dataView.getUint32(offset, littleEndian);
                         const den = dataView.getUint32(offset + 4, littleEndian);
@@ -94,6 +108,7 @@ export function parseExif(buffer) {
                     }
                     // For multiple rationals (unlikely for our tags, maybe logic later if needed)
                     return null;
+                }
 
                 default:
                     // For other types, just return raw value or ignore for now
