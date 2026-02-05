@@ -23,14 +23,16 @@ This project is a secondary development (Fork) of [Raw-Alchemy](https://github.c
 
 ## 🚀 Deployment Guide (Vercel)
 
-This project supports one-click deployment to Vercel. Here is the deployment process for the `main` branch:
+This project supports one-click deployment to Vercel.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Steve-Mr/nitrate-grain)
+
+Manual deployment process:
 
 1.  Fork this repository to your GitHub account.
 2.  Log in to the [Vercel Dashboard](https://vercel.com/dashboard) and click **"Add New..."** -> **"Project"**.
-3.  Select your forked `raw-alchemy` repository and click **"Import"**.
-4.  In the **"Configure Project"** page, apply the following settings:
-    *   **Framework Preset**: Select `Vite`.
-    *   **Root Directory**: Click Edit and select the `raw-alchemy-web` directory (since the web project is located in this subdirectory).
+3.  Select your forked `nitrate-grain` repository and click **"Import"**.
+4.  In the **"Configure Project"** page, keep the default settings (Framework Preset is usually automatically identified as `Vite`).
 5.  Click **"Deploy"**.
 
 Vercel will automatically install dependencies, build the project, and publish it. Once deployment is complete, you will get a live access link.
@@ -41,5 +43,5 @@ Thanks to the contributions of the following projects and individuals:
 
 -   **Raw-Alchemy**: The original project. Thanks to the original author for the open-source spirit.
 -   **jules**: The primary author of this project.
--   **LibRaw-Wasm**: Special thanks to [Steve-Mr/LibRaw-Wasm](https://github.com/Steve-Mr/LibRaw-Wasm) for providing the WASM build, enabling efficient thumbnail extraction.
+-   **LibRaw-Wasm**: Thanks to the [ybouane/LibRaw-Wasm](https://github.com/ybouane/LibRaw-Wasm) project. This project's WASM build is modified from that repository to enable efficient thumbnail extraction.
 -   **Open Source Community**: Thanks to excellent open source projects like React, Vite, Tailwind CSS, Lucide, etc.

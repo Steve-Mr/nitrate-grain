@@ -23,14 +23,16 @@
 
 ## 🚀 部署指南 (Vercel)
 
-本项目支持一键部署到 Vercel。以下是针对 `main` 主分支的部署流程：
+本项目支持一键部署到 Vercel。
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Steve-Mr/nitrate-grain)
+
+手动部署流程：
 
 1.  将本项目 Fork 到你的 GitHub 账号。
 2.  登录 [Vercel Dashboard](https://vercel.com/dashboard) 并点击 **"Add New..."** -> **"Project"**.
-3.  选择你 Fork 的 `raw-alchemy` 仓库并点击 **"Import"**.
-4.  在 **"Configure Project"** 页面进行如下设置：
-    *   **Framework Preset**: 选择 `Vite`.
-    *   **Root Directory**: 点击 Edit，选择 `raw-alchemy-web` 目录 (因为 Web 项目位于该子目录下)。
+3.  选择你 Fork 的 `nitrate-grain` 仓库并点击 **"Import"**.
+4.  在 **"Configure Project"** 页面保持默认设置即可（Framework Preset 通常会自动识别为 `Vite`）。
 5.  点击 **"Deploy"**.
 
 Vercel 将会自动安装依赖、构建项目并发布。部署完成后，你将获得一个访问链接。
@@ -41,5 +43,5 @@ Vercel 将会自动安装依赖、构建项目并发布。部署完成后，你�
 
 -   **Raw-Alchemy**: 本项目的原身，感谢原作者的开源精神。
 -   **jules**: 本项目的主要编写者。
--   **LibRaw-Wasm**: 特别感谢 [Steve-Mr/LibRaw-Wasm](https://github.com/Steve-Mr/LibRaw-Wasm) 提供的 WASM 构建，实现了高效的缩略图提取。
+-   **LibRaw-Wasm**: 感谢 [ybouane/LibRaw-Wasm](https://github.com/ybouane/LibRaw-Wasm) 项目。本项目的 WASM 构建修改自该仓库，实现了高效的缩略图提取。
 -   **开源社区**: 感谢 React, Vite, Tailwind CSS, Lucide 等优秀的开源项目。
