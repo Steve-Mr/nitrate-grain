@@ -83,14 +83,16 @@ export default defineConfig({
           {
             action: '/',
             accept: {
-              'image/x-adobe-dng': ['.dng', '.DNG'],
-              'image/x-sony-arw': ['.arw', '.ARW'],
-              'image/x-canon-cr2': ['.cr2', '.CR2'],
-              'image/x-canon-cr3': ['.cr3', '.CR3'],
-              'image/x-nikon-nef': ['.nef', '.NEF'],
-              'image/x-olympus-orf': ['.orf', '.ORF'],
-              'image/x-fuji-raf': ['.raf', '.RAF'],
-              'image/x-panasonic-rw2': ['.rw2', '.RW2']
+              'image/tiff': ['.dng', '.arw', '.cr2', '.cr3', '.nef', '.orf', '.raf', '.rw2'],
+              'image/x-adobe-dng': ['.dng'],
+              'image/x-sony-arw': ['.arw'],
+              'image/x-canon-cr2': ['.cr2'],
+              'image/x-canon-cr3': ['.cr3'],
+              'image/x-nikon-nef': ['.nef'],
+              'image/x-olympus-orf': ['.orf'],
+              'image/x-fuji-raf': ['.raf'],
+              'image/x-panasonic-rw2': ['.rw2'],
+              'application/octet-stream': ['.dng', '.arw', '.cr2', '.cr3', '.nef', '.orf', '.raf', '.rw2']
             }
           }
         ]
