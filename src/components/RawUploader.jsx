@@ -257,6 +257,26 @@ const RawUploader = () => {
     checkSharedFile();
   }, []);
 
+  // PWA File Handling (Edit Intent)
+  useEffect(() => {
+    if ('launchQueue' in window) {
+      window.launchQueue.setConsumer(async (launchParams) => {
+        if (launchParams.files && launchParams.files.length > 0) {
+          const files = [];
+          for (const handle of launchParams.files) {
+            const file = await handle.getFile();
+            files.push(file);
+          }
+
+          if (files.length > 0) {
+             const firstId = await gallery.addPhotos(files);
+             if (firstId) gallery.selectPhoto(firstId);
+          }
+        }
+      });
+    }
+  }, [gallery.addPhotos, gallery.selectPhoto]);
+
   useEffect(() => {
       if (metadata) {
           const c2p = [1,0,0, 0,1,0, 0,0,1];

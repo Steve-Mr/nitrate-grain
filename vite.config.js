@@ -78,7 +78,22 @@ export default defineConfig({
                     }
                 ]
             }
-        }
+        },
+        file_handlers: [
+          {
+            action: '/',
+            accept: {
+              'image/x-adobe-dng': ['.dng', '.DNG'],
+              'image/x-sony-arw': ['.arw', '.ARW'],
+              'image/x-canon-cr2': ['.cr2', '.CR2'],
+              'image/x-canon-cr3': ['.cr3', '.CR3'],
+              'image/x-nikon-nef': ['.nef', '.NEF'],
+              'image/x-olympus-orf': ['.orf', '.ORF'],
+              'image/x-fuji-raf': ['.raf', '.RAF'],
+              'image/x-panasonic-rw2': ['.rw2', '.RW2']
+            }
+          }
+        ]
       },
       devOptions: {
         enabled: true,
