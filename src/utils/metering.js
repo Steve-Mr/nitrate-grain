@@ -31,9 +31,15 @@ export const calculateAutoExposure = (data, width, height, mode = 'hybrid', bitD
     const targetSampleCount = 40000; // Sufficient for metering
     const stride = Math.max(1, Math.floor(Math.sqrt(totalPixels / targetSampleCount)));
 
-    const lumas = [];
-    const positions = []; // [x, y] for spatial metering (Matrix/Center)
+    const rows = Math.ceil(height / stride);
+    const cols = Math.ceil(width / stride);
+    const estimatedSamples = rows * cols;
 
+    const rawLumas = new Float64Array(estimatedSamples);
+    const hasPositions = mode === 'center-weighted' || mode === 'matrix';
+    const rawPositions = hasPositions ? new Int32Array(estimatedSamples * 2) : null;
+
+    let sampleCount = 0;
     for (let y = 0; y < height; y += stride) {
         for (let x = 0; x < width; x += stride) {
             const idx = (y * width + x) * channels;
@@ -46,15 +52,20 @@ export const calculateAutoExposure = (data, width, height, mode = 'hybrid', bitD
 
             // Calculate Luminance (0.0 - 1.0)
             const lum = (r * R_COEFF + g * G_COEFF + b * B_COEFF) / maxVal;
-            lumas.push(lum);
+            rawLumas[sampleCount] = lum;
 
-            if (mode === 'center-weighted' || mode === 'matrix') {
-                positions.push([x, y]);
+            if (hasPositions) {
+                rawPositions[sampleCount * 2] = x;
+                rawPositions[sampleCount * 2 + 1] = y;
             }
+            sampleCount++;
         }
     }
 
-    if (lumas.length === 0) return 0.0;
+    if (sampleCount === 0) return 0.0;
+
+    const lumas = sampleCount === estimatedSamples ? rawLumas : rawLumas.subarray(0, sampleCount);
+    const positions = hasPositions ? (sampleCount === estimatedSamples ? rawPositions : rawPositions.subarray(0, sampleCount * 2)) : null;
 
     let gain = 1.0;
 
@@ -142,7 +153,8 @@ const strategyCenterWeighted = (lumas, positions, w, h) => {
     let weightTotal = 0.0;
 
     for (let i = 0; i < lumas.length; i++) {
-        const [x, y] = positions[i];
+        const x = positions[i * 2];
+        const y = positions[i * 2 + 1];
         const distSq = (x - centerX)**2 + (y - centerY)**2;
         const weight = Math.exp(-distSq / sigmaSq2);
 
@@ -168,7 +180,8 @@ const strategyMatrix = (lumas, positions, w, h) => {
     const gridCounts = new Int32Array(gridSize * gridSize);
 
     for (let i = 0; i < lumas.length; i++) {
-        const [x, y] = positions[i];
+        const x = positions[i * 2];
+        const y = positions[i * 2 + 1];
         const gx = Math.min(Math.floor(x / gridW), gridSize - 1);
         const gy = Math.min(Math.floor(y / gridH), gridSize - 1);
         const idx = gy * gridSize + gx;
@@ -239,7 +252,7 @@ const strategyMatrix = (lumas, positions, w, h) => {
 const getPercentile = (arr, p) => {
     // Quick approximation or full sort?
     // For 40k samples, sort is fast (~5ms).
-    // We copy to avoid mutating original if needed, but here arr is local.
+    // We copy to Float32Array to match original behavior and for consistent percentile calculation.
     const sorted = Float32Array.from(arr).sort();
     const idx = Math.floor((p / 100) * (sorted.length - 1));
     return sorted[idx];
